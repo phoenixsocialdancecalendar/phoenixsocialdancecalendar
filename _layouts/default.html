@@ -1,0 +1,411 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% if page.title %}{{ page.title }} | {% endif %}{{ site.title }}</title>
+    <meta name="description" content="{{ site.description }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ '/assets/css/site.css' | relative_url }}">
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="site-header">
+        <a class="wordmark" href="{{ '/' | relative_url }}">{{ site.title }}</a>
+        <nav class="site-nav">
+          <a href="{{ '/' | relative_url }}">Events</a>
+          <a href="{{ '/about/' | relative_url }}">About</a>
+        </nav>
+      </header>
+      <main>
+        {{ content }}
+      </main>
+    </div>
+    <script>
+      const sourceFilter = document.querySelector("[data-source-filter]");
+      const calendarRoot = document.querySelector("[data-calendar-root]");
+      const categoryFilters = document.querySelector("[data-category-filters]");
+      const typeFilters = document.querySelector("[data-type-filters]");
+      const formatFilters = document.querySelector("[data-format-filters]");
+      const resetFiltersButton = document.querySelector("[data-reset-filters]");
+
+      function slugify(value) {
+        return (value || "")
+          .toString()
+          .toLowerCase()
+          .trim()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/(^-|-$)/g, "");
+      }
+
+      function parseEvents() {
+        if (!calendarRoot) {
+          return [];
+        }
+        try {
+          return JSON.parse(calendarRoot.dataset.events || "[]");
+        } catch {
+          return [];
+        }
+      }
+
+      const allEvents = parseEvents().map((event) => ({
+        ...event,
+        startDate: new Date(event.start_at),
+        endDate: event.end_at ? new Date(event.end_at) : null,
+        sourceSlug: slugify(event.source_name),
+      }));
+
+      const STYLE_TAXONOMY = {
+        "Jazz-Swing": {
+          color: "#b86a2f",
+          types: ["Swing", "Lindy Hop", "Balboa", "Charleston", "Solo Jazz", "Blues", "Swing / Blues"],
+        },
+        "West Coast Swing": {
+          color: "#1e8e89",
+          types: ["West Coast Swing", "WCS"],
+        },
+        Latin: {
+          color: "#c24b5a",
+          types: ["Salsa", "Bachata", "Salsa / Bachata", "Kizomba", "Zouk", "Cha Cha"],
+        },
+        Ballroom: {
+          color: "#4e6ed8",
+          types: ["Ballroom"],
+        },
+        Country: {
+          color: "#5a8f49",
+          types: ["Country", "Line Dance", "Two-Step"],
+        },
+        "Contra-Folk": {
+          color: "#7a56c5",
+          types: ["Contra"],
+        },
+        Other: {
+          color: "#6f6d77",
+          types: ["Social Dance"],
+        },
+      };
+
+      function classifyStyle(style) {
+        for (const [category, config] of Object.entries(STYLE_TAXONOMY)) {
+          if (config.types.includes(style)) {
+            return { category, color: config.color };
+          }
+        }
+        return { category: "Other", color: STYLE_TAXONOMY.Other.color };
+      }
+
+      allEvents.forEach((event) => {
+        const classification = classifyStyle(event.dance_style);
+        event.category = classification.category;
+        event.categorySlug = slugify(classification.category);
+        event.styleSlug = slugify(event.dance_style);
+        event.color = classification.color;
+        event.activityKind = event.activity_kind || "Social";
+      });
+
+      const calendarGrid = document.querySelector("[data-calendar-grid]");
+      const calendarTitle = document.querySelector("[data-calendar-title]");
+      const agendaTitle = document.querySelector("[data-agenda-title]");
+      const agendaSummary = document.querySelector("[data-agenda-summary]");
+      const agendaList = document.querySelector("[data-agenda-list]");
+      const prevMonthButton = document.querySelector("[data-calendar-prev]");
+      const nextMonthButton = document.querySelector("[data-calendar-next]");
+      const availableTypes = Array.from(new Set(allEvents.map((event) => event.dance_style))).sort((left, right) => left.localeCompare(right));
+      const availableCategories = Array.from(new Set(allEvents.map((event) => event.category))).sort((left, right) => left.localeCompare(right));
+      const availableFormats = Array.from(new Set(allEvents.map((event) => event.activityKind)));
+      let activeFormats = new Set(availableFormats);
+      let activeCategories = new Set(availableCategories);
+      let activeTypes = new Set(availableTypes);
+
+      const formatter = {
+        dayLabel: new Intl.DateTimeFormat("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" }),
+        monthLabel: new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric" }),
+        dayNumber: new Intl.DateTimeFormat("en-US", { day: "numeric" }),
+        timeLabel: new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit" }),
+      };
+
+      let monthCursor = allEvents.length
+        ? new Date(allEvents[0].startDate.getFullYear(), allEvents[0].startDate.getMonth(), 1)
+        : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+      let selectedDayKey = "";
+
+      function filteredEvents() {
+        const sourceValue = sourceFilter ? sourceFilter.value : "";
+        return allEvents.filter((event) => {
+          const categoryMatch = activeCategories.has(event.category);
+          const typeMatch = activeTypes.has(event.dance_style);
+          const formatMatch = activeFormats.has(event.activityKind);
+          const sourceMatch = !sourceValue || event.sourceSlug === sourceValue;
+          return categoryMatch && typeMatch && formatMatch && sourceMatch;
+        });
+      }
+
+      function renderStyleFilters() {
+        if (categoryFilters) {
+          categoryFilters.innerHTML = "";
+          availableCategories.forEach((category) => {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = `filter-pill${activeCategories.has(category) ? " is-active" : ""}`;
+            button.style.setProperty("--pill-color", STYLE_TAXONOMY[category]?.color || STYLE_TAXONOMY.Other.color);
+            button.setAttribute("aria-pressed", activeCategories.has(category) ? "true" : "false");
+            button.textContent = category;
+            button.addEventListener("click", () => {
+              if (activeCategories.has(category)) {
+                activeCategories.delete(category);
+              } else {
+                activeCategories.add(category);
+              }
+              selectedDayKey = "";
+              renderStyleFilters();
+              syncMonthCursor();
+              renderCalendar();
+            });
+            categoryFilters.appendChild(button);
+          });
+        }
+
+        if (typeFilters) {
+          typeFilters.innerHTML = "";
+          availableTypes.forEach((type) => {
+            const { category, color } = classifyStyle(type);
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = `filter-pill filter-pill-type${activeTypes.has(type) ? " is-active" : ""}${activeCategories.has(category) ? "" : " is-dimmed"}`;
+            button.style.setProperty("--pill-color", color);
+            button.setAttribute("aria-pressed", activeTypes.has(type) ? "true" : "false");
+            button.innerHTML = `<span class="filter-pill-dot"></span>${type}`;
+            button.addEventListener("click", () => {
+              if (activeTypes.has(type)) {
+                activeTypes.delete(type);
+              } else {
+                activeTypes.add(type);
+              }
+              selectedDayKey = "";
+              renderStyleFilters();
+              syncMonthCursor();
+              renderCalendar();
+            });
+            typeFilters.appendChild(button);
+          });
+        }
+
+        if (formatFilters) {
+          formatFilters.innerHTML = "";
+          availableFormats.forEach((format) => {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = `filter-pill${activeFormats.has(format) ? " is-active" : ""}`;
+            button.setAttribute("aria-pressed", activeFormats.has(format) ? "true" : "false");
+            button.textContent = format;
+            button.addEventListener("click", () => {
+              if (activeFormats.has(format)) {
+                activeFormats.delete(format);
+              } else {
+                activeFormats.add(format);
+              }
+              selectedDayKey = "";
+              renderStyleFilters();
+              syncMonthCursor();
+              renderCalendar();
+            });
+            formatFilters.appendChild(button);
+          });
+        }
+      }
+
+      function resetStyleFilters() {
+        activeCategories = new Set(availableCategories);
+        activeTypes = new Set(availableTypes);
+        activeFormats = new Set(availableFormats);
+        selectedDayKey = "";
+        renderStyleFilters();
+        syncMonthCursor();
+        renderCalendar();
+      }
+
+      function keyForDate(date) {
+        const year = date.getFullYear();
+        const month = `${date.getMonth() + 1}`.padStart(2, "0");
+        const day = `${date.getDate()}`.padStart(2, "0");
+        return `${year}-${month}-${day}`;
+      }
+
+      function eventsForDay(dayKey, events) {
+        return events
+          .filter((event) => keyForDate(event.startDate) === dayKey)
+          .sort((left, right) => left.startDate - right.startDate);
+      }
+
+      function renderAgenda(events) {
+        if (!agendaTitle || !agendaSummary || !agendaList) {
+          return;
+        }
+
+        if (!selectedDayKey) {
+          agendaTitle.textContent = "Choose a date";
+          agendaSummary.textContent = "Pick any highlighted day to see its events.";
+          agendaList.innerHTML = "";
+          return;
+        }
+
+        const selectedEvents = eventsForDay(selectedDayKey, events);
+        const selectedDate = selectedEvents[0]?.startDate || new Date(`${selectedDayKey}T12:00:00`);
+
+        agendaTitle.textContent = formatter.dayLabel.format(selectedDate);
+        agendaSummary.textContent =
+          selectedEvents.length === 0
+            ? "No events match the current filters on this date."
+            : `${selectedEvents.length} event${selectedEvents.length === 1 ? "" : "s"} on this date.`;
+
+        agendaList.innerHTML = "";
+
+        if (selectedEvents.length === 0) {
+          const empty = document.createElement("p");
+          empty.className = "agenda-empty";
+          empty.textContent = "Try another day or clear a filter.";
+          agendaList.appendChild(empty);
+          return;
+        }
+
+        selectedEvents.forEach((event) => {
+          const item = document.createElement("article");
+          item.className = "agenda-card";
+          item.style.setProperty("--style-color", event.color);
+          item.innerHTML = `
+            <div class="agenda-card-meta">
+              <p class="event-time">${formatter.timeLabel.format(event.startDate)}${event.endDate ? ` to ${formatter.timeLabel.format(event.endDate)}` : ""}</p>
+              <div class="badges">
+                <span>${event.activityKind}</span>
+                <span>${event.category}</span>
+                <span>${event.dance_style}</span>
+                <span>${event.source_name}</span>
+              </div>
+            </div>
+            <div class="agenda-card-body">
+              <h3>${event.title}</h3>
+              ${event.venue || event.city ? `<p class="location">${[event.venue, event.city].filter(Boolean).join(", ")}</p>` : ""}
+              ${event.notes ? `<p class="notes">${event.notes}</p>` : ""}
+            </div>
+            <a class="event-link" href="${event.source_url}">View source</a>
+          `;
+          agendaList.appendChild(item);
+        });
+      }
+
+      function renderCalendar() {
+        if (!calendarRoot || !calendarGrid || !calendarTitle) {
+          return;
+        }
+
+        const events = filteredEvents();
+        const monthStart = new Date(monthCursor.getFullYear(), monthCursor.getMonth(), 1);
+        const monthEnd = new Date(monthCursor.getFullYear(), monthCursor.getMonth() + 1, 0);
+        const visibleStart = new Date(monthStart);
+        visibleStart.setDate(monthStart.getDate() - monthStart.getDay());
+        const visibleEnd = new Date(monthEnd);
+        visibleEnd.setDate(monthEnd.getDate() + (6 - monthEnd.getDay()));
+
+        calendarTitle.textContent = formatter.monthLabel.format(monthStart);
+        calendarGrid.innerHTML = "";
+
+        let firstSelectableKey = "";
+
+        for (let cursor = new Date(visibleStart); cursor <= visibleEnd; cursor.setDate(cursor.getDate() + 1)) {
+          const cellDate = new Date(cursor);
+          const dayKey = keyForDate(cellDate);
+          const dayEvents = eventsForDay(dayKey, events);
+          const isCurrentMonth = cellDate.getMonth() === monthStart.getMonth();
+          const isSelected = selectedDayKey === dayKey;
+
+          if (!firstSelectableKey && dayEvents.length) {
+            firstSelectableKey = dayKey;
+          }
+
+          const cell = document.createElement("button");
+          cell.type = "button";
+          cell.className = `calendar-day${isCurrentMonth ? "" : " is-muted"}${dayEvents.length ? " has-events" : ""}${isSelected ? " is-selected" : ""}`;
+          cell.dataset.dayKey = dayKey;
+          cell.disabled = !dayEvents.length;
+
+          const chips = dayEvents
+            .slice(0, 3)
+            .map((event) => `<span class="event-chip" style="--style-color:${event.color}"><strong class="event-chip-kind">${event.activityKind}</strong>${formatter.timeLabel.format(event.startDate)} ${event.title}</span>`)
+            .join("");
+          const overflow = dayEvents.length > 3 ? `<span class="event-chip event-chip-more">+${dayEvents.length - 3} more</span>` : "";
+
+          cell.innerHTML = `
+            <span class="calendar-day-number">${formatter.dayNumber.format(cellDate)}</span>
+            <span class="calendar-day-events">${chips}${overflow}</span>
+          `;
+
+          cell.addEventListener("click", () => {
+            selectedDayKey = dayKey;
+            renderCalendar();
+          });
+
+          calendarGrid.appendChild(cell);
+        }
+
+        if (!selectedDayKey || !eventsForDay(selectedDayKey, events).length) {
+          selectedDayKey = firstSelectableKey;
+        }
+
+        renderAgenda(events);
+      }
+
+      function availableMonths() {
+        const months = filteredEvents().map((event) => `${event.startDate.getFullYear()}-${event.startDate.getMonth()}`);
+        return Array.from(new Set(months));
+      }
+
+      function syncMonthCursor() {
+        const months = availableMonths();
+        const currentKey = `${monthCursor.getFullYear()}-${monthCursor.getMonth()}`;
+        if (months.includes(currentKey) || !months.length) {
+          return;
+        }
+        const [year, month] = months[0].split("-").map(Number);
+        monthCursor = new Date(year, month, 1);
+      }
+
+      function shiftMonth(direction) {
+        const next = new Date(monthCursor.getFullYear(), monthCursor.getMonth() + direction, 1);
+        const months = availableMonths();
+        const key = `${next.getFullYear()}-${next.getMonth()}`;
+        if (months.includes(key)) {
+          monthCursor = next;
+          selectedDayKey = "";
+          renderCalendar();
+        }
+      }
+
+      if (sourceFilter) {
+        sourceFilter.addEventListener("change", () => {
+          syncMonthCursor();
+          selectedDayKey = "";
+          renderCalendar();
+        });
+      }
+      if (resetFiltersButton) {
+        resetFiltersButton.addEventListener("click", resetStyleFilters);
+      }
+
+      if (prevMonthButton) {
+        prevMonthButton.addEventListener("click", () => shiftMonth(-1));
+      }
+      if (nextMonthButton) {
+        nextMonthButton.addEventListener("click", () => shiftMonth(1));
+      }
+
+      if (calendarRoot) {
+        renderStyleFilters();
+        renderCalendar();
+      }
+    </script>
+  </body>
+</html>

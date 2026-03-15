@@ -1,0 +1,35 @@
+name: Update Events
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 14 * * 1"
+
+permissions:
+  contents: write
+
+jobs:
+  update-events:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Build events data
+        run: python scripts/build_events.py
+
+      - name: Commit updated data
+        run: |
+          if git diff --quiet -- _data/events.json; then
+            echo "No event changes detected."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add _data/events.json
+          git commit -m "Update generated event data"
+          git push

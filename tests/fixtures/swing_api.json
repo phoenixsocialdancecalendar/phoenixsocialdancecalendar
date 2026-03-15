@@ -1,0 +1,19 @@
+{
+  "events": [
+    {
+      "title": "Friday Night Swing Social",
+      "url": "https://www.swingdancingphoenix.com/event/friday-night-swing-social/",
+      "description": "<p>7:15 PM lesson followed by social dancing.</p>",
+      "start_date": "2026-03-20 19:15:00",
+      "end_date": "2026-03-20 22:30:00",
+      "tags": [
+        { "name": "lindy hop" },
+        { "name": "swing dancing" }
+      ],
+      "venue": {
+        "venue": "The Cove Swing Club",
+        "city": "Phoenix"
+      }
+    }
+  ]
+}

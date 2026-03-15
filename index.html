@@ -1,0 +1,95 @@
+---
+layout: default
+title: Upcoming Events
+---
+{% assign events = site.data.events | sort: "start_at" %}
+{% assign sources = events | map: "source_name" | uniq | sort %}
+
+<section class="hero">
+  <p class="eyebrow">Phoenix metro social dancing</p>
+  <h1>A Phoenix dance calendar you can actually scan.</h1>
+  <p class="hero-copy">
+    This site aggregates public dance calendars around Phoenix, normalizes them into one schedule,
+    and refreshes the data on a weekly cadence.
+  </p>
+</section>
+
+<section class="filters">
+  <div class="filter-block">
+    <div class="filter-heading">
+      <span>Categories</span>
+      <button type="button" class="filter-reset" data-reset-filters>Reset styles</button>
+    </div>
+    <div class="pill-row" data-category-filters></div>
+  </div>
+  <div class="filter-block">
+    <div class="filter-heading">
+      <span>Types</span>
+    </div>
+    <div class="pill-row" data-type-filters></div>
+  </div>
+  <div class="filter-block">
+    <div class="filter-heading">
+      <span>Formats</span>
+    </div>
+    <div class="pill-row" data-format-filters></div>
+  </div>
+  <label class="filter-block filter-select">
+    <span>Source</span>
+    <select data-source-filter>
+      <option value="">All sources</option>
+      {% for source in sources %}
+        <option value="{{ source | slugify }}">{{ source }}</option>
+      {% endfor %}
+    </select>
+  </label>
+</section>
+
+{% if events == empty %}
+  <section class="empty-state">
+    <h2>No upcoming events yet.</h2>
+    <p>Run <code>python3 scripts/build_events.py</code> to fetch fresh listings into <code>_data/events.json</code>.</p>
+  </section>
+{% else %}
+  <section
+    class="calendar-shell"
+    data-calendar-root
+    data-events='{{ events | jsonify | escape }}'
+  >
+    <div class="calendar-frame">
+      <div class="calendar-toolbar">
+        <div>
+          <p class="eyebrow">Visual calendar</p>
+          <h2 data-calendar-title>Upcoming events</h2>
+        </div>
+        <div class="calendar-controls">
+          <button type="button" class="calendar-nav" data-calendar-prev aria-label="Previous month">Previous</button>
+          <button type="button" class="calendar-nav" data-calendar-next aria-label="Next month">Next</button>
+        </div>
+      </div>
+
+      <div class="calendar-weekdays" aria-hidden="true">
+        <span>Sun</span>
+        <span>Mon</span>
+        <span>Tue</span>
+        <span>Wed</span>
+        <span>Thu</span>
+        <span>Fri</span>
+        <span>Sat</span>
+      </div>
+
+      <div class="calendar-grid-wrap">
+        <div class="calendar-grid" data-calendar-grid></div>
+      </div>
+    </div>
+
+    <aside class="agenda-panel">
+      <div class="agenda-heading">
+        <p class="eyebrow">Selected day</p>
+        <h2 data-agenda-title>Choose a date</h2>
+        <p class="agenda-summary" data-agenda-summary>Pick any highlighted day to see its events.</p>
+      </div>
+      <div class="agenda-list" data-agenda-list></div>
+    </aside>
+  </section>
+{% endif %}
