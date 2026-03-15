@@ -52,6 +52,9 @@ DAVE_AND_BUSTERS_TEMPE_URL = "https://www.daveandbusters.com/us/en/about/locatio
 BACHATA_ADDICTION_URL = "https://phoenixbachata.com/"
 SCOOTIN_BOOTS_URL = "https://www.scootinboots.com/group-classes"
 DANCEWISE_CLASSES_URL = "https://www.dancewise.com/group-ballroom-classes"
+NRG_BALLROOM_MONTH_URL = "https://nrgballroom.com/events/month/"
+HAROLDS_CORRAL_EVENTS_URL = "https://haroldscorral.com/events-calendar/"
+HAROLDS_CORRAL_API_URL = "https://haroldscorral.com/wp-json/tribe/events/v1/events"
 FATCAT_MEETUP_URL = "https://www.meetup.com/swing-social-dance-in-phoenix-at-fatcat-ballroom/"
 PHOENIX_4TH_URL = "https://phoenix4thofjuly.com/"
 RSCDS_CLASSES_URL = "https://www.rscdsphoenix.com/p/classes-2.html"
@@ -106,6 +109,10 @@ LATIN_SOL_MAIN_PATTERN = re.compile(r"April\s+(?P<start>\d{1,2})\s*-\s*(?P<end>\
 LATIN_SOL_PREPARTY_PATTERN = re.compile(r"Thursday\s+April\s+(?P<day>\d{1,2}),\s*(?P<year>\d{4})", re.IGNORECASE)
 SUMMER_SWING_FEST_PATTERN = re.compile(
     r"August\s+(?P<start>\d{1,2})\s*-\s*(?P<end>\d{1,2})\s*,\s*(?P<year>\d{4})",
+    re.IGNORECASE,
+)
+NRG_EVENT_DETAIL_PATTERN = re.compile(
+    r"^https://nrgballroom\.com/event/[^?#]+/\d{4}-\d{2}-\d{2}/?$",
     re.IGNORECASE,
 )
 CDC_HEADER_TEXT = {"sun", "mon", "tue", "wed", "thu", "fri", "sat", "march", "april"}
@@ -1124,6 +1131,56 @@ def fetch_scootin_boots(fetch_text, today: date) -> list[dict[str, object]]:
     return deduplicate_events(events)
 
 
+def fetch_nrg_ballroom(fetch_text, today: date) -> list[dict[str, object]]:
+    html = fetch_text(NRG_BALLROOM_MONTH_URL)
+    detail_urls = _extract_nrg_event_detail_urls(html)
+    events: list[dict[str, object]] = []
+    for href in detail_urls[:80]:
+        detail_html = fetch_text(href)
+        for payload in extract_jsonld_events(detail_html):
+            event = _nrg_event_from_jsonld(payload, source_url=href)
+            if event and is_future_event(str(event["start_at"]), today):
+                events.append(event)
+    return deduplicate_events(events)
+
+
+def fetch_harolds_corral(fetch_text, today: date) -> list[dict[str, object]]:
+    api_url = HAROLDS_CORRAL_API_URL + "?" + urlencode({"search": "boots dukes", "per_page": 100})
+    payload = json.loads(fetch_text(api_url))
+    events: list[dict[str, object]] = []
+    for item in payload.get("events", []):
+        title = decode_text(str(item.get("title", "")), strip_markup=True)
+        description = str(item.get("description", ""))
+        if not _looks_like_harolds_twostep_event(title, description):
+            continue
+
+        start_dt = parse_iso_datetime(str(item.get("start_date", "")).replace(" ", "T"))
+        if start_dt is None or start_dt.date() < today or start_dt.weekday() != WEEKDAY_MAP["saturday"]:
+            continue
+        end_dt = parse_iso_datetime(str(item.get("end_date", "")).replace(" ", "T"))
+
+        venue_info = item.get("venue") or {}
+        venue = decode_text(str(venue_info.get("venue", "")), strip_markup=True)
+        city = decode_text(str(venue_info.get("city", "")), strip_markup=True)
+        notes, note_flags = clean_event_notes(description, max_length=320)
+        events.append(
+            make_event(
+                title=title,
+                start_at=serialize_dt(start_dt),
+                end_at=serialize_dt(end_dt),
+                venue=venue,
+                city=city,
+                dance_style="Two-Step",
+                source_name="Harold's Cave Creek Corral",
+                source_url=str(item.get("url", HAROLDS_CORRAL_EVENTS_URL)),
+                notes=notes,
+                activity_kind="Social",
+                quality_flags=["structured_source", *note_flags],
+            )
+        )
+    return deduplicate_events(events)
+
+
 def fetch_fatcat_ballroom(fetch_text, today: date) -> list[dict[str, object]]:
     series = [
         {
@@ -1419,6 +1476,8 @@ def all_sources() -> list[SourceDefinition]:
         SourceDefinition("Bachata Addiction", BACHATA_ADDICTION_URL, fetch_bachata_addiction),
         SourceDefinition("DanceWise", DANCEWISE_CLASSES_URL, fetch_dancewise),
         SourceDefinition("Scootin' Boots Dance Hall", SCOOTIN_BOOTS_URL, fetch_scootin_boots),
+        SourceDefinition("NRG Ballroom", NRG_BALLROOM_MONTH_URL, fetch_nrg_ballroom),
+        SourceDefinition("Harold's Cave Creek Corral", HAROLDS_CORRAL_EVENTS_URL, fetch_harolds_corral),
         SourceDefinition("Fatcat Ballroom", FATCAT_BALLROOM_URL, fetch_fatcat_ballroom),
         SourceDefinition("Fatcat Ballroom Meetup", FATCAT_MEETUP_URL, fetch_fatcat_meetup),
         SourceDefinition("Phoenix 4th of July Dance Convention", PHOENIX_4TH_URL, fetch_phoenix_4th),
@@ -2386,6 +2445,101 @@ def _looks_like_partner_dance_event(title: str, notes: str) -> bool:
     haystack = f"{title} {notes}".lower()
     blockers = ["zumba", "fitness", "cardio", "hip hop", "workout", "exercise"]
     return not any(blocker in haystack for blocker in blockers)
+
+
+def _extract_nrg_event_detail_urls(html: str) -> list[str]:
+    detail_urls: list[str] = []
+    for _label, href in extract_links(html, base_url=NRG_BALLROOM_MONTH_URL):
+        if not NRG_EVENT_DETAIL_PATTERN.match(href):
+            continue
+        if href not in detail_urls:
+            detail_urls.append(href)
+    return detail_urls
+
+
+def _nrg_event_from_jsonld(payload: dict[str, object], *, source_url: str) -> dict[str, object] | None:
+    title = decode_text(str(payload.get("name", "")), strip_markup=True)
+    description = decode_text(str(payload.get("description", "")), strip_markup=True)
+    if not title or not _looks_like_nrg_partner_dance_event(title, description):
+        return None
+
+    start_dt = parse_iso_datetime(payload.get("startDate"))  # type: ignore[arg-type]
+    if start_dt is None:
+        return None
+    end_dt = parse_iso_datetime(payload.get("endDate"))  # type: ignore[arg-type]
+
+    venue = ""
+    city = ""
+    location = payload.get("location")
+    if isinstance(location, dict):
+        venue = decode_text(str(location.get("name", "")), strip_markup=True)
+        address = location.get("address")
+        if isinstance(address, dict):
+            city = decode_text(str(address.get("addressLocality", "")), strip_markup=True)
+            venue = venue or decode_text(str(address.get("streetAddress", "")), strip_markup=True)
+        elif isinstance(address, str):
+            venue = venue or decode_text(address, strip_markup=True)
+            city = infer_city(address)
+
+    notes, note_flags = clean_event_notes(str(payload.get("description", "")), max_length=320)
+    return make_event(
+        title=title,
+        start_at=serialize_dt(start_dt),
+        end_at=serialize_dt(end_dt),
+        venue=venue or "NRG Ballroom",
+        city=city or infer_city(description, title) or "Tempe",
+        dance_style=_infer_dance_style(title, description),
+        source_name="NRG Ballroom",
+        source_url=str(payload.get("url") or source_url),
+        notes=notes,
+        quality_flags=["structured_source", *note_flags],
+    )
+
+
+def _looks_like_nrg_partner_dance_event(title: str, notes: str) -> bool:
+    haystack = f"{title} {notes}".lower()
+    blockers = [
+        "line dance",
+        "linedance",
+        "jazzercise",
+        "dancercise",
+        "fitness",
+        "workout",
+        "zumba",
+        "heels",
+        "hip hop",
+        "feminine expression",
+        "lady styling",
+        "ladies styling",
+        "solo styling",
+        "shine class",
+        "body movement",
+    ]
+    if any(blocker in haystack for blocker in blockers):
+        return False
+
+    keywords = [
+        "bachata",
+        "ballroom",
+        "country",
+        "foxtrot",
+        "jive",
+        "partner",
+        "rumba",
+        "salsa",
+        "swing",
+        "tango",
+        "two-step",
+        "waltz",
+        "west coast",
+        "wcs",
+    ]
+    return any(keyword in haystack for keyword in keywords)
+
+
+def _looks_like_harolds_twostep_event(title: str, notes: str) -> bool:
+    haystack = f"{title} {decode_text(notes, strip_markup=True)}".lower()
+    return "boots" in haystack and "dukes" in haystack and "dance" in haystack
 
 
 def _fetch_google_calendar_source(

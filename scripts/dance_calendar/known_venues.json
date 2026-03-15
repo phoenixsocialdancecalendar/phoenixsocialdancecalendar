@@ -1,0 +1,145 @@
+[
+  {
+    "aliases": ["scootin boots dance hall", "515 n stapley dr"],
+    "venue": "Scootin Boots Dance Hall",
+    "city": "Mesa",
+    "latitude": 33.424332,
+    "longitude": -111.80612
+  },
+  {
+    "aliases": ["phoenix salsa dance", "2530 n 7th st"],
+    "venue": "Phoenix Salsa Dance",
+    "city": "Phoenix",
+    "latitude": 33.476113,
+    "longitude": -112.064994
+  },
+  {
+    "aliases": ["fatcat ballroom", "3131 e thunderbird rd"],
+    "venue": "Fatcat Ballroom",
+    "city": "Phoenix",
+    "latitude": 33.609569,
+    "longitude": -112.014301
+  },
+  {
+    "aliases": ["scottsdale neighborhood arts place", "4425 n granite reef rd", "4425 n granite reef road"],
+    "venue": "Scottsdale Neighborhood Arts Place",
+    "city": "Scottsdale",
+    "latitude": 33.499564,
+    "longitude": -111.899673
+  },
+  {
+    "aliases": ["dancewise", "5555 n 7th st"],
+    "venue": "DanceWise",
+    "city": "Phoenix",
+    "latitude": 33.518243,
+    "longitude": -112.064833
+  },
+  {
+    "aliases": ["nrg ballroom", "931 e elliot rd", "931 e elliot road"],
+    "venue": "NRG Ballroom",
+    "city": "Tempe",
+    "latitude": 33.348366,
+    "longitude": -111.926014
+  },
+  {
+    "aliases": ["z room", "1337 s gilbert rd", "1337 s gilbert road"],
+    "venue": "Z Room | Dance + Filming",
+    "city": "Mesa",
+    "latitude": 33.390228,
+    "longitude": -111.790796
+  },
+  {
+    "aliases": ["bethany lutheran church", "4300 n 82nd st"],
+    "venue": "Bethany Lutheran Church",
+    "city": "Scottsdale",
+    "latitude": 33.498775,
+    "longitude": -111.90582
+  },
+  {
+    "aliases": ["32 s center st", "heritage academy"],
+    "venue": "Heritage Academy",
+    "city": "Mesa",
+    "latitude": 33.414391,
+    "longitude": -111.831253
+  },
+  {
+    "aliases": ["1106 n central ave", "irish cultural center"],
+    "venue": "Irish Cultural Center",
+    "city": "Phoenix",
+    "latitude": 33.4604,
+    "longitude": -112.074
+  },
+  {
+    "aliases": ["2716 n dobson rd", "greek orthodox church community center"],
+    "venue": "Greek Orthodox Church Community Center",
+    "city": "Chandler",
+    "latitude": 33.344378,
+    "longitude": -111.876056
+  },
+  {
+    "aliases": ["1316 e cheery lynn rd", "phoenix conservatory of music"],
+    "venue": "Phoenix Conservatory of Music",
+    "city": "Phoenix",
+    "latitude": 33.4836,
+    "longitude": -112.0528
+  },
+  {
+    "aliases": ["1905 e hackamore st"],
+    "venue": "1905 E Hackamore St",
+    "city": "Gilbert",
+    "latitude": 33.382,
+    "longitude": -111.7915
+  },
+  {
+    "aliases": ["rscds phoenix branch", "granite reef senior center", "1700 n granite reef rd", "1700 n granite reef road"],
+    "canonicalize": true,
+    "venue": "Granite Reef Senior Center, 1700 N Granite Reef Rd",
+    "city": "Scottsdale",
+    "latitude": 33.4670947,
+    "longitude": -111.9016525,
+    "verified_from": "https://www.rscdsphoenix.com/p/classes-2.html"
+  },
+  {
+    "aliases": ["guild of the vale", "200 n macdonald"],
+    "canonicalize": true,
+    "venue": "Guild of the Vale, 200 N Macdonald",
+    "city": "Mesa",
+    "latitude": 33.419592,
+    "longitude": -111.834156,
+    "verified_from": "https://www.swingdancingphoenix.com/event/swingin-lindy-hop-mondays-hepkats-mesa/2026-03-16/"
+  },
+  {
+    "aliases": ["the cove swing club", "cove swing club", "2240 w desert cove ave"],
+    "canonicalize": true,
+    "venue": "The Cove Swing Club, 2240 W Desert Cove Ave",
+    "city": "Phoenix",
+    "latitude": 33.5858521,
+    "longitude": -112.1061979,
+    "verified_from": "https://www.swingdancingphoenix.com/event/east-coast-swing-the-cove-swing-2025-04-19/2026-03-21/"
+  },
+  {
+    "aliases": ["the duce", "525 s central ave"],
+    "canonicalize": true,
+    "venue": "The Duce, 525 S Central Ave",
+    "city": "Phoenix",
+    "latitude": 33.4423306,
+    "longitude": -112.0736119,
+    "verified_from": "https://www.swingdancingphoenix.com/event/south-central-swing-at-the-duce-%f0%9f%a5%b3/2026-03-19/"
+  },
+  {
+    "aliases": ["spellbound studios", "4902 e mcdowell rd"],
+    "canonicalize": true,
+    "venue": "Spellbound Studios, 4902 E McDowell Rd",
+    "city": "Phoenix",
+    "latitude": 33.4661462,
+    "longitude": -111.9759423
+  },
+  {
+    "aliases": ["versalles reception hall", "1422 e main st"],
+    "canonicalize": true,
+    "venue": "Versalles Reception Hall, 1422 E Main St",
+    "city": "Mesa",
+    "latitude": 33.415314,
+    "longitude": -111.802199
+  }
+]

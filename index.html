@@ -1,6 +1,6 @@
 ---
 layout: default
-title: Upcoming Events
+title: Upcoming Social Dance Events
 ---
 {% assign events = site.data.events | sort: "start_at" %}
 {% assign sources = events | map: "source_name" | uniq | sort %}
@@ -20,9 +20,9 @@ title: Upcoming Events
       <div class="calendar-frame">
         <div class="calendar-toolbar">
           <div class="calendar-heading">
-            <p class="eyebrow">Calendar</p>
-            <h2 data-calendar-title>Upcoming events</h2>
-            <p class="calendar-subtitle" data-calendar-subtitle>Select a highlighted day for full details.</p>
+            <p class="eyebrow">Phoenix Social Dance</p>
+            <h2 data-calendar-title>Upcoming social dance events</h2>
+            <p class="calendar-subtitle" data-calendar-subtitle>Browse Phoenix-area socials, lessons, workshops, and dance weekends in one place.</p>
           </div>
           <div class="calendar-controls">
             <div class="calendar-view-switch" role="group" aria-label="Choose calendar view">
@@ -37,12 +37,9 @@ title: Upcoming Events
           </div>
         </div>
 
+        <div class="calendar-legend" data-category-legend></div>
+
         <section class="today-tomorrow-panel" aria-label="Today and tomorrow events" hidden>
-          <div class="today-tomorrow-heading">
-            <p class="eyebrow">Today &amp; Tomorrow</p>
-            <h2>Closer look</h2>
-            <p class="today-tomorrow-summary">A roomier view for the next two days, with extra space for notes and venue details.</p>
-          </div>
           <div class="today-tomorrow-grid">
             <section class="today-tomorrow-day" data-spotlight-day="today">
               <div class="today-tomorrow-day-heading">
@@ -62,8 +59,6 @@ title: Upcoming Events
             </section>
           </div>
         </section>
-
-        <div class="calendar-legend" data-category-legend></div>
 
         <div class="calendar-weekdays" aria-hidden="true">
           <span>Sun</span>
@@ -150,10 +145,6 @@ title: Upcoming Events
 
           <section class="filters">
             <div class="filter-block filter-block-wide">
-              <div class="filter-heading">
-                <span>Plan your week</span>
-                <span class="filter-hint">Fast shortcuts</span>
-              </div>
               <div class="planner-controls">
                 <div class="pill-row planner-pill-row" data-quick-filters></div>
                 <label class="filter-select planner-city-select">

@@ -302,13 +302,7 @@ main {
 .today-tomorrow-panel {
   display: grid;
   gap: 1rem;
-  padding: 1rem;
-  background:
-    linear-gradient(135deg, rgba(255, 253, 248, 0.98) 0%, rgba(247, 239, 228, 0.94) 100%);
-  border: 1px solid var(--line);
-  border-radius: 28px;
-  box-shadow: var(--shadow-strong);
-  backdrop-filter: blur(12px);
+  align-content: start;
 }
 
 .today-tomorrow-panel[hidden],
@@ -921,6 +915,29 @@ main {
   border: 1px solid rgba(31, 36, 48, 0.08);
   color: var(--muted);
   font-size: 0.9rem;
+  cursor: pointer;
+  transition:
+    transform 120ms ease,
+    border-color 120ms ease,
+    box-shadow 120ms ease,
+    background 120ms ease,
+    color 120ms ease;
+}
+
+.legend-item:hover,
+.legend-item:focus-visible {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--legend-color, var(--accent)) 42%, white);
+  box-shadow: 0 10px 20px rgba(84, 58, 28, 0.12);
+}
+
+.legend-item.is-active {
+  color: var(--ink);
+  border-color: color-mix(in srgb, var(--legend-color, var(--accent)) 52%, white);
+  background: color-mix(in srgb, var(--legend-color, var(--accent)) 18%, white);
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--legend-color, var(--accent)) 12%, white),
+    0 10px 20px rgba(84, 58, 28, 0.12);
 }
 
 .legend-swatch {
@@ -1941,7 +1958,6 @@ body.is-agenda-resizing {
   .filter-dock,
   .calendar-frame,
   .agenda-panel,
-  .today-tomorrow-panel,
   .empty-state,
   .about-hero,
   .about-panel,

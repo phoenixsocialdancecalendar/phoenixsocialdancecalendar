@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import re
 from datetime import datetime
+from pathlib import Path
 
 CITY_COORDINATES: dict[str, tuple[float, float]] = {
     "phoenix": (33.4484, -112.0740),
@@ -12,156 +14,7 @@ CITY_COORDINATES: dict[str, tuple[float, float]] = {
     "chandler": (33.3062, -111.8413),
     "gilbert": (33.3528, -111.7890),
 }
-KNOWN_VENUES: tuple[dict[str, object], ...] = (
-    {
-        "aliases": ("scootin boots dance hall", "515 n stapley dr"),
-        "venue": "Scootin Boots Dance Hall",
-        "city": "Mesa",
-        "latitude": 33.424332,
-        "longitude": -111.806120,
-    },
-    {
-        "aliases": ("phoenix salsa dance", "2530 n 7th st"),
-        "venue": "Phoenix Salsa Dance",
-        "city": "Phoenix",
-        "latitude": 33.476113,
-        "longitude": -112.064994,
-    },
-    {
-        "aliases": ("fatcat ballroom", "3131 e thunderbird rd"),
-        "venue": "Fatcat Ballroom",
-        "city": "Phoenix",
-        "latitude": 33.609569,
-        "longitude": -112.014301,
-    },
-    {
-        "aliases": (
-            "scottsdale neighborhood arts place",
-            "4425 n granite reef rd",
-            "4425 n granite reef road",
-        ),
-        "venue": "Scottsdale Neighborhood Arts Place",
-        "city": "Scottsdale",
-        "latitude": 33.499564,
-        "longitude": -111.899673,
-    },
-    {
-        "aliases": ("dancewise", "5555 n 7th st"),
-        "venue": "DanceWise",
-        "city": "Phoenix",
-        "latitude": 33.518243,
-        "longitude": -112.064833,
-    },
-    {
-        "aliases": ("nrg ballroom", "931 e elliot rd", "931 e elliot road"),
-        "venue": "NRG Ballroom",
-        "city": "Tempe",
-        "latitude": 33.348366,
-        "longitude": -111.926014,
-    },
-    {
-        "aliases": ("z room", "1337 s gilbert rd", "1337 s gilbert road"),
-        "venue": "Z Room | Dance + Filming",
-        "city": "Mesa",
-        "latitude": 33.390228,
-        "longitude": -111.790796,
-    },
-    {
-        "aliases": ("bethany lutheran church", "4300 n 82nd st"),
-        "venue": "Bethany Lutheran Church",
-        "city": "Scottsdale",
-        "latitude": 33.498775,
-        "longitude": -111.905820,
-    },
-    {
-        "aliases": ("32 s center st", "heritage academy"),
-        "venue": "Heritage Academy",
-        "city": "Mesa",
-        "latitude": 33.414391,
-        "longitude": -111.831253,
-    },
-    {
-        "aliases": ("1106 n central ave", "irish cultural center"),
-        "venue": "Irish Cultural Center",
-        "city": "Phoenix",
-        "latitude": 33.460400,
-        "longitude": -112.074000,
-    },
-    {
-        "aliases": ("2716 n dobson rd", "greek orthodox church community center"),
-        "venue": "Greek Orthodox Church Community Center",
-        "city": "Chandler",
-        "latitude": 33.344378,
-        "longitude": -111.876056,
-    },
-    {
-        "aliases": ("1316 e cheery lynn rd", "phoenix conservatory of music"),
-        "venue": "Phoenix Conservatory of Music",
-        "city": "Phoenix",
-        "latitude": 33.483600,
-        "longitude": -112.052800,
-    },
-    {
-        "aliases": ("1905 e hackamore st",),
-        "venue": "1905 E Hackamore St",
-        "city": "Gilbert",
-        "latitude": 33.382000,
-        "longitude": -111.791500,
-    },
-    {
-        "aliases": (
-            "rscds phoenix branch",
-            "granite reef senior center",
-            "1700 n granite reef rd",
-            "1700 n granite reef road",
-        ),
-        "canonicalize": True,
-        "venue": "Granite Reef Senior Center, 1700 N Granite Reef Rd",
-        "city": "Scottsdale",
-        "latitude": 33.4670947,
-        "longitude": -111.9016525,
-    },
-    {
-        "aliases": ("guild of the vale", "200 n macdonald"),
-        "canonicalize": True,
-        "venue": "Guild of the Vale, 200 N Macdonald",
-        "city": "Mesa",
-        "latitude": 33.4195920,
-        "longitude": -111.8341560,
-    },
-    {
-        "aliases": ("the cove swing club", "cove swing club", "2240 w desert cove ave"),
-        "canonicalize": True,
-        "venue": "The Cove Swing Club, 2240 W Desert Cove Ave",
-        "city": "Phoenix",
-        "latitude": 33.5858521,
-        "longitude": -112.1061979,
-    },
-    {
-        "aliases": ("the duce", "525 s central ave"),
-        "canonicalize": True,
-        "venue": "The Duce, 525 S Central Ave",
-        "city": "Phoenix",
-        "latitude": 33.4423306,
-        "longitude": -112.0736119,
-    },
-    {
-        "aliases": ("spellbound studios", "4902 e mcdowell rd"),
-        "canonicalize": True,
-        "venue": "Spellbound Studios, 4902 E McDowell Rd",
-        "city": "Phoenix",
-        "latitude": 33.4661462,
-        "longitude": -111.9759423,
-    },
-    {
-        "aliases": ("versalles reception hall", "1422 e main st"),
-        "canonicalize": True,
-        "venue": "Versalles Reception Hall, 1422 E Main St",
-        "city": "Mesa",
-        "latitude": 33.4153140,
-        "longitude": -111.8021990,
-    },
-)
+KNOWN_VENUES_PATH = Path(__file__).with_name("known_venues.json")
 
 NEGATED_CANCELLATION_PATTERN = re.compile(
     r"\b(?:not|is not|isn't|has not been|hasn't been|never)\b.{0,24}\bcancel(?:led|ed)\b",
@@ -194,6 +47,31 @@ def normalize_space(value: str | None) -> str:
 
 def normalize_location_token(value: str | None) -> str:
     return re.sub(r"[^a-z0-9]+", " ", normalize_space(value).lower()).strip()
+
+
+def load_known_venues() -> tuple[dict[str, object], ...]:
+    payload = json.loads(KNOWN_VENUES_PATH.read_text())
+    venues: list[dict[str, object]] = []
+    for entry in payload:
+        aliases = tuple(
+            normalize_location_token(alias)
+            for alias in entry.get("aliases", [])
+            if normalize_location_token(alias)
+        )
+        venues.append(
+            {
+                "aliases": aliases,
+                "canonicalize": bool(entry.get("canonicalize")),
+                "venue": normalize_space(entry.get("venue")),
+                "city": normalize_space(entry.get("city")),
+                "latitude": entry.get("latitude"),
+                "longitude": entry.get("longitude"),
+            }
+        )
+    return tuple(venues)
+
+
+KNOWN_VENUES = load_known_venues()
 
 
 def canonicalize_location(venue: str | None, city: str | None) -> tuple[str, str]:

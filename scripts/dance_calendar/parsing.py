@@ -480,6 +480,22 @@ def normalize_for_match(value: str) -> str:
     return re.sub(r"[^a-z0-9]+", " ", normalize_space(value).lower()).strip()
 
 
+TITLE_ALIAS_GROUPS = (
+    frozenset(
+        {
+            normalize_for_match("East Coast Swing + Social Dancing – Fatcat"),
+            normalize_for_match("Triple Step Tuesdays"),
+        }
+    ),
+)
+
+
+def _titles_match_for_dedup(left: str, right: str) -> bool:
+    if token_similarity(left, right) >= 0.75 or left in right or right in left:
+        return True
+    return any(left in aliases and right in aliases for aliases in TITLE_ALIAS_GROUPS)
+
+
 def token_similarity(left: str, right: str) -> float:
     left_tokens = set(normalize_for_match(left).split())
     right_tokens = set(normalize_for_match(right).split())
@@ -806,11 +822,7 @@ def _likely_same_event(left: dict[str, object], right: dict[str, object]) -> boo
         return False
     left_title = normalize_for_match(str(left["title"]))
     right_title = normalize_for_match(str(right["title"]))
-    title_close = (
-        token_similarity(left_title, right_title) >= 0.75
-        or left_title in right_title
-        or right_title in left_title
-    )
+    title_close = _titles_match_for_dedup(left_title, right_title)
     place_close = token_similarity(str(left["venue"]), str(right["venue"])) >= 0.75 or (
         normalize_for_match(str(left["city"])) and normalize_for_match(str(left["city"])) == normalize_for_match(str(right["city"]))
     )

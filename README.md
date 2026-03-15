@@ -41,6 +41,8 @@ Static Jekyll site plus Python ingestion scripts for aggregating Phoenix-area so
 - Bachata Addiction / Phoenix Bachata
 - DanceWise recurring classes and social nights
 - Fatcat Ballroom recurring class pages
+- NRG Ballroom monthly events calendar, filtered to partner-dance events only
+- Harold's Cave Creek Corral Saturday Boots & Dukes dance nights, labeled as Two-Step
 - Fatcat Ballroom Meetup group
 - Shall We Dance Phoenix public calendar feed
 - Phoenix 4th of July Dance Convention
@@ -72,3 +74,7 @@ The optional health report at `reports/source_health.json` captures per-source s
 ## Manual overrides
 
 Add manual entries to `_data/manual_events.json` using the same schema. This is the intended path for image-driven or otherwise brittle sources such as `cdc.dance`.
+
+## Venue alias dataset
+
+Add vetted venue aliases, canonical names, and coordinates to `scripts/dance_calendar/known_venues.json`. The ingestion pipeline loads that dataset when remapping scraped organizer labels like `RSCDS Phoenix Branch` to a real venue/address.

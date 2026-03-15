@@ -13,7 +13,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 
 from dance_calendar.models import infer_activity_kind, make_event, resolve_location
 from dance_calendar.parsing import deduplicate_events, extract_text_lines
-from dance_calendar.pipeline import build_event_catalog_with_report, run_source, suppress_cdc_ocr_duplicates
+from dance_calendar.pipeline import (
+    build_event_catalog_with_report,
+    exclude_non_social_dance_events,
+    run_source,
+    suppress_cdc_ocr_duplicates,
+)
 from dance_calendar.sources import (
     DAVE_AND_BUSTERS_TEMPE_URL,
     BACHATA_ADDICTION_URL,
@@ -32,6 +37,8 @@ from dance_calendar.sources import (
     PHXTMD_URL,
     PHXTMD_ENGLISH_URL,
     PHXTMD_SPECIAL_URL,
+    NRG_BALLROOM_MONTH_URL,
+    HAROLDS_CORRAL_API_URL,
     SALSA_VIDA_CALENDAR_URL,
     SCOOTIN_BOOTS_URL,
     SWING_DANCING_PHOENIX_API,
@@ -67,6 +74,8 @@ from dance_calendar.sources import (
     fetch_swing_dancing_phoenix,
     fetch_white_rabbit_wcs,
     fetch_latin_sol,
+    fetch_harolds_corral,
+    fetch_nrg_ballroom,
     fetch_zouk_phoenix,
     _infer_dance_style,
 )
@@ -775,6 +784,157 @@ END:VCALENDAR
         self.assertEqual(len(deduped), 1)
         self.assertIn("Source Two", deduped[0]["notes"])
 
+    def test_deduplicate_events_merges_fatcat_tuesday_alias_titles(self) -> None:
+        events = [
+            {
+                "id": "one",
+                "title": "East Coast Swing + Social Dancing – Fatcat",
+                "start_at": "2026-03-17T19:00:00-07:00",
+                "end_at": "2026-03-17T22:00:00-07:00",
+                "all_day": False,
+                "venue": "Fatcat Ballroom",
+                "city": "Phoenix",
+                "dance_style": "Swing",
+                "source_name": "Swing Dancing Phoenix",
+                "source_url": "https://one.example",
+                "notes": "7 PM East Coast Swing lesson and social dancing.",
+                "last_seen_at": "2026-03-14T00:00:00Z",
+            },
+            {
+                "id": "two",
+                "title": "Triple Step Tuesdays",
+                "start_at": "2026-03-17T19:00:00-07:00",
+                "end_at": "2026-03-17T21:30:00-07:00",
+                "all_day": False,
+                "venue": "Fatcat Ballroom",
+                "city": "Phoenix",
+                "dance_style": "Swing",
+                "source_name": "Fatcat Ballroom",
+                "source_url": "https://two.example",
+                "notes": "7 PM East Coast Swing and Lindy Hop class followed by an 8 PM swing dance party.",
+                "last_seen_at": "2026-03-14T00:00:00Z",
+            },
+        ]
+
+        deduped = deduplicate_events(events)
+
+        self.assertEqual(len(deduped), 1)
+        self.assertIn("Fatcat Ballroom", deduped[0]["notes"])
+
+    def test_fetch_nrg_ballroom_includes_only_partner_dances(self) -> None:
+        month_html = """
+        <html>
+          <body>
+            <a href="https://nrgballroom.com/event/sensual-bachata/2026-03-20/">Sensual Bachata</a>
+            <a href="https://nrgballroom.com/event/monday-line-dancing/2026-03-23/">Monday Line Dancing</a>
+            <a href="https://nrgballroom.com/event/sensual-bachata/2026-03-20/">Sensual Bachata</a>
+            <a href="https://nrgballroom.com/events/month/2026-04/">Next Month</a>
+          </body>
+        </html>
+        """
+        partner_detail = """
+        <html>
+          <head>
+            <script type="application/ld+json">
+              {
+                "@context": "https://schema.org",
+                "@type": "Event",
+                "name": "Sensual Bachata",
+                "startDate": "2026-03-20T20:00:00-07:00",
+                "endDate": "2026-03-20T23:00:00-07:00",
+                "description": "Partner bachata night at NRG Ballroom.",
+                "url": "https://nrgballroom.com/event/sensual-bachata/2026-03-20/",
+                "location": {
+                  "@type": "Place",
+                  "name": "NRG Ballroom",
+                  "address": {
+                    "@type": "PostalAddress",
+                    "streetAddress": "931 E Elliot Rd",
+                    "addressLocality": "Tempe"
+                  }
+                }
+              }
+            </script>
+          </head>
+        </html>
+        """
+        non_partner_detail = """
+        <html>
+          <head>
+            <script type="application/ld+json">
+              {
+                "@context": "https://schema.org",
+                "@type": "Event",
+                "name": "Monday Line Dancing",
+                "startDate": "2026-03-23T19:00:00-07:00",
+                "endDate": "2026-03-23T21:00:00-07:00",
+                "description": "Beginner line dance class and open dancing.",
+                "url": "https://nrgballroom.com/event/monday-line-dancing/2026-03-23/",
+                "location": {
+                  "@type": "Place",
+                  "name": "NRG Ballroom",
+                  "address": {
+                    "@type": "PostalAddress",
+                    "streetAddress": "931 E Elliot Rd",
+                    "addressLocality": "Tempe"
+                  }
+                }
+              }
+            </script>
+          </head>
+        </html>
+        """
+
+        payloads = {
+            NRG_BALLROOM_MONTH_URL: month_html,
+            "https://nrgballroom.com/event/sensual-bachata/2026-03-20/": partner_detail,
+            "https://nrgballroom.com/event/monday-line-dancing/2026-03-23/": non_partner_detail,
+        }
+
+        events = fetch_nrg_ballroom(lambda url: payloads[url], date(2026, 3, 15))
+
+        self.assertEqual(len(events), 1)
+        self.assertEqual(events[0]["title"], "Sensual Bachata")
+        self.assertEqual(events[0]["venue"], "NRG Ballroom")
+        self.assertEqual(events[0]["city"], "Tempe")
+
+    def test_fetch_harolds_corral_includes_saturday_twostep_dances(self) -> None:
+        payload = {
+            "events": [
+                {
+                    "title": "SATURDAY BOOTS & DUKES DANCE LESSONS featuring the Silver Sage Band",
+                    "description": "<p>Join in on the fun with our Dance Lessons hosted by Boots &amp; Dukes Dance Group at 7:30 pm and Live Music at 8:30 pm!</p>",
+                    "start_date": "2026-03-14 19:30:00",
+                    "end_date": "2026-03-15 01:00:00",
+                    "url": "https://haroldscorral.com/event/saturday-boots-dukes/2026-03-14/",
+                    "venue": {
+                        "venue": "Harold&#8217;s Corral",
+                        "city": "Cave Creek",
+                    },
+                },
+                {
+                    "title": "SATURDAY AFTERNOON with Last Train to Juarez",
+                    "description": "<p>Enjoy Saturday afternoon with live music from 2 pm - 6 pm!</p>",
+                    "start_date": "2026-03-14 14:00:00",
+                    "end_date": "2026-03-14 18:00:00",
+                    "url": "https://haroldscorral.com/event/saturday-afternoon-with-last-train-to-juarez/",
+                    "venue": {
+                        "venue": "Harold&#8217;s Corral",
+                        "city": "Cave Creek",
+                    },
+                },
+            ]
+        }
+
+        api_url = HAROLDS_CORRAL_API_URL + "?search=boots+dukes&per_page=100"
+        events = fetch_harolds_corral(lambda url: json.dumps(payload) if url == api_url else "", date(2026, 3, 10))
+
+        self.assertEqual(len(events), 1)
+        self.assertEqual(events[0]["title"], "SATURDAY BOOTS & DUKES DANCE LESSONS featuring the Silver Sage Band")
+        self.assertEqual(events[0]["dance_style"], "Two-Step")
+        self.assertEqual(events[0]["venue"], "Harold’s Corral")
+        self.assertEqual(events[0]["city"], "Cave Creek")
+
     def test_dave_and_busters_ignores_non_event_dance_mentions(self) -> None:
         html = """
         <html>
@@ -1307,6 +1467,39 @@ END:VCALENDAR
 
 
 class PipelineTests(TestCase):
+    def test_exclude_non_social_dance_events_filters_fitness_classes(self) -> None:
+        events = [
+            make_event(
+                title="Hot Hula Fitness",
+                start_at="2026-03-17T18:30:00-07:00",
+                end_at=None,
+                venue="Creative Dance Collective",
+                city="Mesa",
+                dance_style="Social Dance",
+                source_name="CDC Studios",
+                source_url="https://cdc.dance/calendar/",
+                notes="Follow-along fitness class.",
+                quality_flags=["text_source"],
+            ),
+            make_event(
+                title="West Coast Swing Beginner",
+                start_at="2026-03-18T19:00:00-07:00",
+                end_at="2026-03-18T20:00:00-07:00",
+                venue="Creative Dance Collective",
+                city="Mesa",
+                dance_style="West Coast Swing",
+                source_name="CDC Studios",
+                source_url="https://cdc.dance/calendar/",
+                notes="Partner dance lesson.",
+                quality_flags=["text_source"],
+            ),
+        ]
+
+        filtered = exclude_non_social_dance_events(events)
+
+        self.assertEqual(len(filtered), 1)
+        self.assertEqual(filtered[0]["title"], "West Coast Swing Beginner")
+
     def test_suppress_cdc_ocr_duplicates_prefers_white_rabbit_cdc_wcs(self) -> None:
         events = [
             make_event(

@@ -83,6 +83,7 @@ def build_event_catalog_with_report(
         events.extend(source_run["raw_events"])
 
     events = [event for event in events if is_future_event(str(event["start_at"]), today)]
+    events = exclude_non_social_dance_events(events)
     events = suppress_cdc_ocr_duplicates(events)
     events = deduplicate_events(events)
     events.sort(key=lambda event: (str(event["start_at"]), str(event["title"])))
@@ -216,6 +217,36 @@ def strip_raw_events(source_run: dict[str, object]) -> dict[str, object]:
     visible = dict(source_run)
     visible.pop("raw_events", None)
     return visible
+
+
+def exclude_non_social_dance_events(events: list[dict[str, object]]) -> list[dict[str, object]]:
+    return [event for event in events if is_social_dance_event(event)]
+
+
+def is_social_dance_event(event: dict[str, object]) -> bool:
+    haystack = normalize_space(
+        " ".join(
+            str(event.get(field, ""))
+            for field in ["title", "notes", "dance_style", "activity_kind", "source_name"]
+        )
+    ).lower()
+
+    blockers = [
+        "hot hula fitness",
+        "zumba",
+        "jazzercise",
+        "dancercise",
+        "dance cardio",
+        "cardio dance",
+        "fitness",
+        "workout",
+        "exercise",
+        "aerobics",
+        "barre",
+        "pilates",
+        "yoga",
+    ]
+    return not any(blocker in haystack for blocker in blockers)
 
 
 def suppress_cdc_ocr_duplicates(events: list[dict[str, object]]) -> list[dict[str, object]]:

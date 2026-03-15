@@ -99,7 +99,7 @@
         },
         Latin: {
           color: "#c24b5a",
-          types: ["Salsa", "Bachata", "Salsa / Bachata", "Kizomba", "Zouk", "Cha Cha"],
+          types: ["Salsa", "Bachata", "Salsa / Bachata", "Kizomba", "Zouk", "Brazilian Zouk", "Cha Cha", "Argentine Tango", "Tango"],
         },
         Ballroom: {
           color: "#4e6ed8",
@@ -119,7 +119,15 @@
         },
       };
 
-      function classifyStyle(style) {
+      function isBallroomTangoEvent(event) {
+        const haystack = [event?.title, event?.notes, event?.source_name].filter(Boolean).join(" ").toLowerCase();
+        return ["progressive", "ballroom", "smooth", "international"].some((marker) => haystack.includes(marker));
+      }
+
+      function classifyStyle(style, event = null) {
+        if (style === "Tango" && isBallroomTangoEvent(event)) {
+          return { category: "Ballroom", color: STYLE_TAXONOMY.Ballroom.color };
+        }
         for (const [category, config] of Object.entries(STYLE_TAXONOMY)) {
           if (config.types.includes(style)) {
             return { category, color: config.color };
@@ -129,7 +137,7 @@
       }
 
       allEvents.forEach((event) => {
-        const classification = classifyStyle(event.dance_style);
+        const classification = classifyStyle(event.dance_style, event);
         event.category = classification.category;
         event.categorySlug = slugify(classification.category);
         event.styleSlug = slugify(event.dance_style);
@@ -589,6 +597,44 @@
         return true;
       }
 
+      function isCategoryShortcutActive(category) {
+        const categoryTypes = stylesByCategory[category] || [];
+        return activeCategories.size === 1
+          && activeCategories.has(category)
+          && activeTypes.size === categoryTypes.length
+          && categoryTypes.every((type) => activeTypes.has(type));
+      }
+
+      function activateCategoryShortcut(category) {
+        if (!availableCategories.includes(category)) {
+          return;
+        }
+
+        const shouldReset = isCategoryShortcutActive(category);
+        const currentDayKey = selectedDayKey;
+        const currentSelectionWasUserInitiated = userSelectedDay;
+        const categoryTypes = stylesByCategory[category] || [];
+
+        if (shouldReset) {
+          activeCategories = new Set(availableCategories);
+          activeTypes = new Set(availableTypes);
+        } else {
+          activeCategories = new Set([category]);
+          activeTypes = new Set(categoryTypes);
+        }
+
+        selectedMapLocationKey = "";
+        const nextEvents = filteredEvents();
+        syncMonthCursor(nextEvents);
+        syncWeekCursor(nextEvents);
+
+        const nextDayKey = currentDayKey && eventsForDay(currentDayKey, nextEvents).length ? currentDayKey : "";
+        selectDay(nextDayKey, { userInitiated: Boolean(nextDayKey) && currentSelectionWasUserInitiated });
+
+        renderStyleFilters();
+        renderCalendar();
+      }
+
       function updateFilterSummary(events) {
         if (!filterSummary) {
           return;
@@ -653,7 +699,7 @@
           calendarWeekdays.hidden = mode === "today" || mode === "map";
         }
         if (categoryLegend) {
-          categoryLegend.hidden = mode === "today" || mode === "map";
+          categoryLegend.hidden = false;
         }
         if (calendarGridWrap) {
           calendarGridWrap.hidden = mode !== "month";
@@ -764,9 +810,13 @@
         const visibleCategories = availableCategories.filter((category) => activeCategories.has(category) && events.some((event) => event.category === category));
         categoryLegend.innerHTML = "";
         visibleCategories.forEach((category) => {
-          const item = document.createElement("span");
-          item.className = "legend-item";
-          item.innerHTML = `<span class="legend-swatch" style="--legend-color:${STYLE_TAXONOMY[category]?.color || STYLE_TAXONOMY.Other.color}"></span>${category}`;
+          const item = document.createElement("button");
+          item.type = "button";
+          item.className = `legend-item${isCategoryShortcutActive(category) ? " is-active" : ""}`;
+          item.dataset.categoryShortcut = category;
+          item.setAttribute("aria-pressed", isCategoryShortcutActive(category) ? "true" : "false");
+          item.style.setProperty("--legend-color", STYLE_TAXONOMY[category]?.color || STYLE_TAXONOMY.Other.color);
+          item.innerHTML = `<span class="legend-swatch"></span>${category}`;
           categoryLegend.appendChild(item);
         });
       }
@@ -2246,6 +2296,17 @@
       window.addEventListener("resize", syncAgendaPanelWidth);
 
       if (calendarRoot) {
+        const categoryShortcutHandler = (event) => {
+          const shortcut = event.target.closest("[data-category-shortcut]");
+          if (!shortcut || !categoryLegend?.contains(shortcut)) {
+            return;
+          }
+          event.preventDefault();
+          activateCategoryShortcut(shortcut.dataset.categoryShortcut || "");
+        };
+
+        categoryLegend?.addEventListener("click", categoryShortcutHandler);
+
         applyUrlState();
         syncViewModeWithViewport();
         renderStyleFilters();
