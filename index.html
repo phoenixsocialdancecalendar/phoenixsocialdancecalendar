@@ -5,46 +5,6 @@ title: Upcoming Events
 {% assign events = site.data.events | sort: "start_at" %}
 {% assign sources = events | map: "source_name" | uniq | sort %}
 
-<section class="hero">
-  <p class="eyebrow">Phoenix metro social dancing</p>
-  <h1>A Phoenix dance calendar you can actually scan.</h1>
-  <p class="hero-copy">
-    This site aggregates public dance calendars around Phoenix, normalizes them into one schedule,
-    and refreshes the data on a weekly cadence.
-  </p>
-</section>
-
-<section class="filters">
-  <div class="filter-block">
-    <div class="filter-heading">
-      <span>Categories</span>
-      <button type="button" class="filter-reset" data-reset-filters>Reset styles</button>
-    </div>
-    <div class="pill-row" data-category-filters></div>
-  </div>
-  <div class="filter-block">
-    <div class="filter-heading">
-      <span>Types</span>
-    </div>
-    <div class="pill-row" data-type-filters></div>
-  </div>
-  <div class="filter-block">
-    <div class="filter-heading">
-      <span>Formats</span>
-    </div>
-    <div class="pill-row" data-format-filters></div>
-  </div>
-  <label class="filter-block filter-select">
-    <span>Source</span>
-    <select data-source-filter>
-      <option value="">All sources</option>
-      {% for source in sources %}
-        <option value="{{ source | slugify }}">{{ source }}</option>
-      {% endfor %}
-    </select>
-  </label>
-</section>
-
 {% if events == empty %}
   <section class="empty-state">
     <h2>No upcoming events yet.</h2>
@@ -52,44 +12,191 @@ title: Upcoming Events
   </section>
 {% else %}
   <section
-    class="calendar-shell"
+    class="calendar-stage"
     data-calendar-root
     data-events='{{ events | jsonify | escape }}'
   >
-    <div class="calendar-frame">
-      <div class="calendar-toolbar">
-        <div>
-          <p class="eyebrow">Visual calendar</p>
-          <h2 data-calendar-title>Upcoming events</h2>
+    <div class="calendar-main">
+      <div class="calendar-frame">
+        <div class="calendar-toolbar">
+          <div class="calendar-heading">
+            <p class="eyebrow">Calendar</p>
+            <h2 data-calendar-title>Upcoming events</h2>
+            <p class="calendar-subtitle" data-calendar-subtitle>Select a highlighted day for full details.</p>
+          </div>
+          <div class="calendar-controls">
+            <div class="calendar-view-switch" role="group" aria-label="Choose calendar view">
+              <button type="button" class="calendar-view-toggle" data-view-mode="month" aria-pressed="true">Month</button>
+              <button type="button" class="calendar-view-toggle" data-view-mode="week" aria-pressed="false">Week</button>
+              <button type="button" class="calendar-view-toggle" data-view-mode="today" aria-pressed="false">Today &amp; Tomorrow</button>
+              <button type="button" class="calendar-view-toggle" data-view-mode="map" aria-pressed="false">Map</button>
+            </div>
+            <button type="button" class="calendar-nav calendar-nav-secondary" data-calendar-today>Today</button>
+            <button type="button" class="calendar-nav" data-calendar-prev aria-label="Previous period">Previous</button>
+            <button type="button" class="calendar-nav" data-calendar-next aria-label="Next period">Next</button>
+          </div>
         </div>
-        <div class="calendar-controls">
-          <button type="button" class="calendar-nav" data-calendar-prev aria-label="Previous month">Previous</button>
-          <button type="button" class="calendar-nav" data-calendar-next aria-label="Next month">Next</button>
+
+        <section class="today-tomorrow-panel" aria-label="Today and tomorrow events" hidden>
+          <div class="today-tomorrow-heading">
+            <p class="eyebrow">Today &amp; Tomorrow</p>
+            <h2>Closer look</h2>
+            <p class="today-tomorrow-summary">A roomier view for the next two days, with extra space for notes and venue details.</p>
+          </div>
+          <div class="today-tomorrow-grid">
+            <section class="today-tomorrow-day" data-spotlight-day="today">
+              <div class="today-tomorrow-day-heading">
+                <p class="eyebrow">Today</p>
+                <h3 data-spotlight-title="today">Today</h3>
+                <p class="today-tomorrow-day-summary" data-spotlight-summary="today">Loading today&apos;s events.</p>
+              </div>
+              <div class="today-tomorrow-list" data-spotlight-list="today"></div>
+            </section>
+            <section class="today-tomorrow-day" data-spotlight-day="tomorrow">
+              <div class="today-tomorrow-day-heading">
+                <p class="eyebrow">Tomorrow</p>
+                <h3 data-spotlight-title="tomorrow">Tomorrow</h3>
+                <p class="today-tomorrow-day-summary" data-spotlight-summary="tomorrow">Loading tomorrow&apos;s events.</p>
+              </div>
+              <div class="today-tomorrow-list" data-spotlight-list="tomorrow"></div>
+            </section>
+          </div>
+        </section>
+
+        <div class="calendar-legend" data-category-legend></div>
+
+        <div class="calendar-weekdays" aria-hidden="true">
+          <span>Sun</span>
+          <span>Mon</span>
+          <span>Tue</span>
+          <span>Wed</span>
+          <span>Thu</span>
+          <span>Fri</span>
+          <span>Sat</span>
         </div>
-      </div>
 
-      <div class="calendar-weekdays" aria-hidden="true">
-        <span>Sun</span>
-        <span>Mon</span>
-        <span>Tue</span>
-        <span>Wed</span>
-        <span>Thu</span>
-        <span>Fri</span>
-        <span>Sat</span>
-      </div>
+        <div class="calendar-grid-wrap">
+          <div class="calendar-grid" data-calendar-grid></div>
+        </div>
 
-      <div class="calendar-grid-wrap">
-        <div class="calendar-grid" data-calendar-grid></div>
+        <div class="calendar-week-wrap" data-calendar-week-wrap hidden>
+          <div class="calendar-week" data-calendar-week></div>
+        </div>
+
+        <div class="calendar-map-wrap" data-calendar-map-wrap hidden>
+          <div class="calendar-map-toolbar">
+            <div class="map-range-switch" role="group" aria-label="Choose a map date range" data-map-range-filters></div>
+            <p class="calendar-map-summary" data-calendar-map-summary>Choose a date range to explore locations.</p>
+          </div>
+          <div class="calendar-map-layout">
+            <div class="calendar-map-canvas" data-calendar-map></div>
+            <div class="calendar-map-list" data-calendar-map-list></div>
+          </div>
+        </div>
       </div>
     </div>
 
+    <div
+      class="agenda-resize-handle"
+      data-agenda-resize
+      role="separator"
+      aria-orientation="vertical"
+      aria-label="Resize details panel"
+      tabindex="0"
+    >
+      <span class="agenda-resize-grip" aria-hidden="true">
+        <span></span>
+        <span></span>
+        <span></span>
+      </span>
+    </div>
+
     <aside class="agenda-panel">
-      <div class="agenda-heading">
-        <p class="eyebrow">Selected day</p>
-        <h2 data-agenda-title>Choose a date</h2>
-        <p class="agenda-summary" data-agenda-summary>Pick any highlighted day to see its events.</p>
+      <details class="filter-dock filter-dock-sidebar" aria-label="Calendar filters">
+        <summary class="filter-dock-summary">
+          <div class="filter-dock-copy">
+            <h2>Filters</h2>
+            <p class="filter-summary" data-filter-summary>Showing all events.</p>
+          </div>
+          <span class="filter-dock-toggle" aria-hidden="true">
+            <span class="filter-dock-toggle-closed">Show filters</span>
+            <span class="filter-dock-toggle-open">Hide filters</span>
+          </span>
+        </summary>
+
+        <div class="filter-dock-content">
+          <div class="filter-dock-actions">
+            <label class="filter-search">
+              <span>Search</span>
+              <input
+                type="search"
+                data-search-filter
+                placeholder="Search Fatcat, bachata, Tempe..."
+                autocomplete="off"
+                spellcheck="false"
+              >
+            </label>
+            <label class="filter-select filter-select-inline">
+              <span>Source</span>
+              <select data-source-filter>
+                <option value="">All sources</option>
+                {% for source in sources %}
+                  <option value="{{ source | slugify }}">{{ source }}</option>
+                {% endfor %}
+              </select>
+            </label>
+            <button type="button" class="filter-reset filter-reset-solid" data-reset-filters>Show everything</button>
+          </div>
+
+          <section class="filters">
+            <div class="filter-block filter-block-wide">
+              <div class="filter-heading">
+                <span>Plan your week</span>
+                <span class="filter-hint">Fast shortcuts</span>
+              </div>
+              <div class="planner-controls">
+                <div class="pill-row planner-pill-row" data-quick-filters></div>
+                <label class="filter-select planner-city-select">
+                  <span>City</span>
+                  <select data-city-filter>
+                    <option value="">All cities</option>
+                  </select>
+                </label>
+              </div>
+            </div>
+            <div class="filter-block filter-block-wide">
+              <div class="filter-heading">
+                <span>Dance families</span>
+                <span class="filter-hint">Start broad</span>
+              </div>
+              <div class="pill-row pill-row-categories" data-category-filters></div>
+            </div>
+            <div class="filter-block filter-block-wide">
+              <div class="filter-heading">
+                <span>Specific dances</span>
+                <span class="filter-hint">Refine the mix</span>
+              </div>
+              <div class="pill-row" data-type-filters></div>
+            </div>
+            <div class="filter-block filter-block-formats">
+              <div class="filter-heading">
+                <span>Event types</span>
+                <span class="filter-hint">Socials vs lessons</span>
+              </div>
+              <div class="pill-row pill-row-formats" data-format-filters></div>
+            </div>
+          </section>
+        </div>
+      </details>
+
+      <div class="agenda-details">
+        <div class="agenda-heading">
+          <p class="eyebrow">Day details</p>
+          <h2 data-agenda-title>Choose a date</h2>
+          <p class="agenda-summary" data-agenda-summary>Pick any highlighted day to see its events.</p>
+        </div>
+        <div class="agenda-list" data-agenda-list></div>
       </div>
-      <div class="agenda-list" data-agenda-list></div>
     </aside>
   </section>
 {% endif %}

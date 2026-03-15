@@ -19,8 +19,18 @@ jobs:
         with:
           python-version: "3.11"
 
+      - name: Run scraper tests
+        run: python -m unittest discover -s tests
+
       - name: Build events data
-        run: python scripts/build_events.py
+        run: python scripts/build_events.py --report-output reports/source_health.json
+
+      - name: Upload source health report
+        uses: actions/upload-artifact@v4
+        with:
+          name: source-health-report
+          path: reports/source_health.json
+          if-no-files-found: error
 
       - name: Commit updated data
         run: |

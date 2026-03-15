@@ -7,7 +7,7 @@ install:
 	$(BUNDLE) install
 
 update-events:
-	$(PYTHON) scripts/build_events.py
+	$(PYTHON) scripts/build_events.py --report-output reports/source_health.json
 
 test:
 	$(PYTHON) -m unittest discover -s tests

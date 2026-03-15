@@ -1,0 +1,10 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VEVENT
+DTSTART;TZID=America/Phoenix:20260320T190000
+DTEND;TZID=America/Phoenix:20260320T230000
+SUMMARY:Country and West Coast Swing Dance
+DESCRIPTION:Country and West Coast Swing social with lessons before dancing.
+LOCATION:ScootinBoots, Mesa, AZ
+END:VEVENT
+END:VCALENDAR

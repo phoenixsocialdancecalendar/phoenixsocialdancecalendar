@@ -7,7 +7,7 @@ Static Jekyll site plus Python ingestion scripts for aggregating Phoenix-area so
 1. Generate or refresh event data:
 
    ```bash
-   python3 scripts/build_events.py
+   python3 scripts/build_events.py --report-output reports/source_health.json
    ```
 
 2. Serve the Jekyll site:
@@ -26,11 +26,26 @@ Static Jekyll site plus Python ingestion scripts for aggregating Phoenix-area so
 ## Sources
 
 - Swing Dancing Phoenix via their public events API
+- Desert City Swing weekly dance page
+- AZSalsa / TUMBAO Latin Fridays page
+- SWINGdepenDANCE annual event page
+- Latin Sol Festival event page
+- Summer Swing Fest event page
 - Salsa Vida Phoenix calendar plus event detail pages
+- Phoenix Argentine Tango embedded Google calendars
+- Zouk Phoenix embedded Google calendar
 - Phoenix Traditional Music and Dance Society contra dance page
 - Greater Phoenix Swing Dance Club calendar page
 - Phoenix Salsa Dance calendar page
 - Dave & Buster's Tempe, filtered to dated dance events only
+- Bachata Addiction / Phoenix Bachata
+- DanceWise recurring classes and social nights
+- Fatcat Ballroom recurring class pages
+- Fatcat Ballroom Meetup group
+- Shall We Dance Phoenix public calendar feed
+- Phoenix 4th of July Dance Convention
+- RSCDS Phoenix Branch classes
+- Phoenix English Country Dancers
 - Country Dance Community via `_data/manual_events.json`
 
 ## Data model
@@ -49,6 +64,10 @@ Generated events use this shape:
 - `source_url`
 - `notes`
 - `last_seen_at`
+- `quality_flags`
+- `quality_note`
+
+The optional health report at `reports/source_health.json` captures per-source status, warnings, retries, and event summaries without being committed to the repo.
 
 ## Manual overrides
 
